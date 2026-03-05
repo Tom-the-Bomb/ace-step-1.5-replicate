@@ -1,4 +1,5 @@
 import os
+import subprocess
 import tempfile
 from pathlib import Path as PathLib
 from typing import List, Optional
@@ -6,6 +7,10 @@ from typing import List, Optional
 import logging
 
 from cog import BasePredictor, Input, Path
+
+from acestep.handler import AceStepHandler
+from acestep.inference import GenerationParams, GenerationConfig, generate_music
+from acestep.llm_inference import LLMHandler
 
 log = logging.getLogger(__name__)
 
@@ -16,10 +21,6 @@ LM_MODEL = "acestep-5Hz-lm-4B"
 class Predictor(BasePredictor):
     def setup(self) -> None:
         """Download models if needed, then load into GPU memory."""
-        import subprocess
-        from acestep.handler import AceStepHandler
-        from acestep.llm_inference import LLMHandler
-
         project_root = os.path.dirname(os.path.abspath(__file__))
         checkpoint_dir = PathLib(project_root) / "weights"
 
@@ -131,8 +132,6 @@ class Predictor(BasePredictor):
         ),
     ) -> List[Path]:
         """Generate music from text description and optional lyrics."""
-        from acestep.inference import GenerationParams, GenerationConfig, generate_music
-
         output_dir = tempfile.mkdtemp()
 
         params = GenerationParams(
