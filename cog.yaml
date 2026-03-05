@@ -3,12 +3,11 @@ build:
   cuda: "12.8"
   python_version: "3.12"
   system_packages:
-    - "git"
     - "ffmpeg"
     - "libsndfile1-dev"
   run:
     - "git clone --depth 1 https://github.com/ace-step/ACE-Step-1.5.git /tmp/ace-step"
-    - "pip install --timeout 120 /tmp/ace-step/acestep/third_parts/nano-vllm"
-    - "pip install --timeout 120 --extra-index-url https://download.pytorch.org/whl/cu128 /tmp/ace-step"
+    - "pip install --extra-index-url https://download.pytorch.org/whl/cu128 /tmp/ace-step/acestep/third_parts/nano-vllm /tmp/ace-step"
+    - "rm -rf /tmp/ace-step"
 
 predict: "predict.py:Predictor"

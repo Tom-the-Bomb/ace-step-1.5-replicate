@@ -1,0 +1,15 @@
+[project]
+name = "ace-step-replicate"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "cog",
+    "ace-step @ git+https://github.com/ace-step/ACE-Step-1.5.git",
+]
+
+[tool.uv.sources]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

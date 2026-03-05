@@ -15,13 +15,26 @@ LM_MODEL = "acestep-5Hz-lm-4B"
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
-        """Load pre-downloaded models into GPU memory."""
+        """Download models if needed, then load into GPU memory."""
+        import subprocess
         from acestep.handler import AceStepHandler
         from acestep.llm_inference import LLMHandler
 
-        # Models are pre-downloaded at build time into /src/checkpoints
         project_root = os.path.dirname(os.path.abspath(__file__))
         checkpoint_dir = PathLib(project_root) / "weights"
+
+        if not (checkpoint_dir / DIT_MODEL).exists():
+            log.info("Downloading main model weights...")
+            subprocess.run(
+                ["acestep-download", "-d", str(checkpoint_dir)],
+                check=True,
+            )
+        if not (checkpoint_dir / LM_MODEL).exists():
+            log.info("Downloading %s weights...", LM_MODEL)
+            subprocess.run(
+                ["acestep-download", "-d", str(checkpoint_dir), "-m", LM_MODEL],
+                check=True,
+            )
 
         log.info("Loading DiT model: %s", DIT_MODEL)
         self.dit_handler = AceStepHandler()
@@ -30,7 +43,7 @@ class Predictor(BasePredictor):
             config_path=DIT_MODEL,
             device="cuda",
             use_flash_attention=True,
-            compile_model=True,
+            compile_model=False,
             offload_to_cpu=False,
             offload_dit_to_cpu=False,
             quantization=None,
