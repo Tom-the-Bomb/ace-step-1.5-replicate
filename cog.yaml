@@ -10,4 +10,5 @@ build:
     - "pip install --extra-index-url https://download.pytorch.org/whl/cu128 /tmp/ace-step/acestep/third_parts/nano-vllm /tmp/ace-step"
     - "rm -rf /tmp/ace-step"
 
+image: "r8.im/fishaudio/ace-step-1.5"
 predict: "predict.py:Predictor"

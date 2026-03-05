@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       model_name:
-        description: 'ace-step/ACE-Step-1.5". If unset, this will default to the value of `image` in cog.yaml.'
+        description: 'e.g. "fishaudio/ace-step-1.5". If unset, this will default to the value of `image` in cog.yaml.'
   # Uncomment these lines to trigger the workflow on every push to the main branch
   push:
     branches:
@@ -43,6 +43,7 @@ jobs:
           #
           # To genereate a CLI auth token, run `cog login` or visit this page
           # in your browser: https://replicate.com/account/api-token
+          cog-version: "v0.16.12"
           token: ${{ secrets.REPLICATE_CLI_AUTH_TOKEN }}
 
       # If you trigger the workflow manually, you can specify the model name.
