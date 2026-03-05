@@ -1,7 +1,7 @@
 import os
 import tempfile
 from pathlib import Path as PathLib
-from typing import List
+from typing import List, Optional
 
 import logging
 
@@ -12,39 +12,37 @@ log = logging.getLogger(__name__)
 DIT_MODEL = "acestep-v15-turbo"
 LM_MODEL = "acestep-5Hz-lm-4B"
 
+
 class Predictor(BasePredictor):
     def setup(self) -> None:
+        """Load pre-downloaded models into GPU memory."""
         from acestep.handler import AceStepHandler
         from acestep.llm_inference import LLMHandler
-        from acestep.model_downloader import ensure_lm_model
 
+        # Models are pre-downloaded at build time into /src/checkpoints
         project_root = os.path.dirname(os.path.abspath(__file__))
-        checkpoint_dir = PathLib(project_root) / "checkpoints"
-        os.makedirs(checkpoint_dir, exist_ok=True)
+        checkpoint_dir = PathLib(project_root) / "weights"
 
-        dl_ok, dl_msg = ensure_lm_model(
-            model_name=LM_MODEL,
-            checkpoints_dir=checkpoint_dir,
-        )
-        log.info("LM download: %s (ok=%s)", dl_msg, dl_ok)
-
+        log.info("Loading DiT model: %s", DIT_MODEL)
         self.dit_handler = AceStepHandler()
         init_status, _ = self.dit_handler.initialize_service(
             project_root=project_root,
             config_path=DIT_MODEL,
             device="cuda",
             use_flash_attention=True,
+            compile_model=True,
             offload_to_cpu=False,
             offload_dit_to_cpu=False,
             quantization=None,
         )
         log.info("DiT init: %s", init_status)
 
+        log.info("Loading LM model: %s", LM_MODEL)
         self.llm_handler = LLMHandler()
         lm_status, lm_success = self.llm_handler.initialize(
             checkpoint_dir=str(checkpoint_dir),
             lm_model_path=LM_MODEL,
-            backend="vllm",
+            backend="pt",
             device="cuda",
             offload_to_cpu=False,
         )
@@ -53,58 +51,58 @@ class Predictor(BasePredictor):
     def predict(
         self,
         prompt: str = Input(
-            description="Text description of the music to generate. Include genre, mood, instruments, style.",
+            description="Short text describing the desired music — genre, mood, instruments, style. Max 512 characters.",
             default="upbeat electronic dance music with heavy bass and synth leads",
         ),
         lyrics: str = Input(
-            description="Lyrics for the song. Use '[Instrumental]' for instrumental tracks. Supports 50+ languages.",
+            description="Lyrics for the song. Use '[Instrumental]' for instrumental tracks. Max 4096 characters.",
             default="[Instrumental]",
         ),
         duration: float = Input(
-            description="Duration of the generated audio in seconds.",
+            description="Target audio length in seconds. Set to -1 for auto.",
             default=30.0,
-            ge=10.0,
-            le=240.0,
+            ge=-1.0,
+            le=600.0,
         ),
-        bpm: int = Input(
-            description="Beats per minute. Set to 0 for auto-detection by the LM.",
-            default=0,
-            ge=0,
+        bpm: Optional[int] = Input(
+            description="Beats per minute (30-300). Leave unset for auto-detection by the LM.",
+            default=None,
+            ge=30,
             le=300,
         ),
         key_scale: str = Input(
-            description="Musical key and scale (e.g. 'C major', 'A minor'). Leave empty for auto.",
+            description="Musical key and scale (e.g. 'C major', 'F# minor', 'Bb major'). Leave empty for auto.",
             default="",
         ),
         time_signature: str = Input(
-            description="Time signature.",
-            default="4/4",
-            choices=["2/4", "3/4", "4/4", "6/8"],
+            description="Time signature: 2 for 2/4, 3 for 3/4, 4 for 4/4, 6 for 6/8. Use 'auto' for auto-detection.",
+            default="auto",
+            choices=["auto", "2", "3", "4", "6"],
         ),
         inference_steps: int = Input(
-            description="Number of denoising steps. Turbo model works best with 4-8 steps.",
+            description="Number of diffusion steps. Turbo model: 4-8 recommended. Base/SFT: 32-100.",
             default=8,
             ge=1,
-            le=20,
+            le=200,
         ),
         guidance_scale: float = Input(
-            description="Classifier-free guidance scale. Higher values follow the prompt more closely. Turbo model ignores this.",
-            default=1.0,
+            description="CFG strength. Only used by base/SFT models — ignored by turbo. Higher = follows prompt more strictly.",
+            default=7.0,
             ge=1.0,
             le=15.0,
         ),
         shift: float = Input(
-            description="Timestep shift factor. Recommended 3.0 for turbo model.",
+            description="Timestep shift factor. Default 1.0, use 3.0 for turbo model.",
             default=3.0,
             ge=1.0,
             le=5.0,
         ),
         seed: int = Input(
-            description="Random seed for reproducibility. Use -1 for random.",
+            description="Random seed for reproducibility. -1 for random.",
             default=-1,
         ),
         thinking: bool = Input(
-            description="Enable LM chain-of-thought reasoning for better metadata generation.",
+            description="Enable LM chain-of-thought reasoning for metadata, caption, and language detection.",
             default=True,
         ),
         batch_size: int = Input(
@@ -115,7 +113,7 @@ class Predictor(BasePredictor):
         ),
         audio_format: str = Input(
             description="Output audio format.",
-            default="mp3",
+            default="flac",
             choices=["mp3", "wav", "flac"],
         ),
     ) -> List[Path]:
@@ -128,13 +126,13 @@ class Predictor(BasePredictor):
             caption=prompt,
             lyrics=lyrics,
             duration=duration,
-            bpm=bpm if bpm > 0 else None,
+            bpm=bpm,
             keyscale=key_scale,
-            timesignature=time_signature,
+            timesignature="" if time_signature == "auto" else time_signature,
             inference_steps=inference_steps,
             guidance_scale=guidance_scale,
             shift=shift,
-            seed=seed if seed >= 0 else -1,
+            seed=seed,
             thinking=thinking,
             task_type="text2music",
             infer_method="ode",

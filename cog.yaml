@@ -6,13 +6,9 @@ build:
     - "git"
     - "ffmpeg"
     - "libsndfile1-dev"
-  python_packages:
-    - "torch==2.10.0+cu128"
-    - "torchvision==0.25.0+cu128"
-    - "torchaudio==2.10.0+cu128"
-  python_extra_index_urls:
-    - "https://download.pytorch.org/whl/cu128"
   run:
-    - "pip install git+https://github.com/ace-step/ACE-Step-1.5.git"
+    - "git clone --depth 1 https://github.com/ace-step/ACE-Step-1.5.git /tmp/ace-step"
+    - "pip install --timeout 120 /tmp/ace-step/acestep/third_parts/nano-vllm"
+    - "pip install --timeout 120 --extra-index-url https://download.pytorch.org/whl/cu128 /tmp/ace-step"
 
 predict: "predict.py:Predictor"
