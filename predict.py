@@ -126,8 +126,8 @@ class Predictor(BasePredictor):
         ),
         audio_format: str = Input(
             description="Output audio format.",
-            default="flac",
-            choices=["mp3", "wav", "flac"],
+            default="mp3",
+            choices=["mp3", "wav", "flac", "wav32", "opus", "aac"],
         ),
     ) -> List[Path]:
         output_dir = tempfile.mkdtemp()
