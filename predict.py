@@ -20,7 +20,6 @@ LM_MODEL = "acestep-5Hz-lm-4B"
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
-        """Download models if needed, then load into GPU memory."""
         project_root = os.path.dirname(os.path.abspath(__file__))
         checkpoint_dir = PathLib(project_root) / "weights"
 
@@ -131,7 +130,6 @@ class Predictor(BasePredictor):
             choices=["mp3", "wav", "flac"],
         ),
     ) -> List[Path]:
-        """Generate music from text description and optional lyrics."""
         output_dir = tempfile.mkdtemp()
 
         params = GenerationParams(
